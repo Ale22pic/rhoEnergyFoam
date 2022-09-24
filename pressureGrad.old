@@ -1,0 +1,35 @@
+//    Evaluate pressure gradient for channel flow
+      dimensionedScalar dpdx
+      (
+       "dpdx",
+       dimensionSet(1,-2,-2,0,0,0,0),
+       scalar(1.)
+      );
+// 
+      scalar dpdx_temp = 0;
+      scalar drhoUx    = 0;
+      scalar Tbulk     = 0;
+      scalar vol       = 0;
+      volScalarField rhoUx = rhoU.component(0) ;
+      volVectorField flU   = fvc::div(momFlux) ;
+      volScalarField flUx  = flU.component(0)  ;
+      volScalarField rhoUT = T ;
+      forAll (flUx, cellI)
+      {
+       dpdx_temp += flUx[cellI]*mesh.V()[cellI];
+       drhoUx    += rhoUx[cellI]*mesh.V()[cellI];
+//     Tbulk     += rhoUx[cellI]*T[cellI]*mesh.V()[cellI];
+       Tbulk     += T[cellI]*mesh.V()[cellI];
+       vol       += mesh.V()[cellI];
+      }
+//
+      reduce(dpdx_temp,sumOp<scalar>());//MPI all reduce
+      reduce(drhoUx,sumOp<scalar>())   ;//MPI all reduce
+      reduce(Tbulk,sumOp<scalar>())    ;//MPI all reduce
+      reduce(vol      ,sumOp<scalar>());
+      dpdx       = dpdx_temp/vol*dpdx;
+      dpdx_prt   = dpdx;
+      drhoUx_prt = drhoUx/vol;
+      Tbulk = Tbulk/vol;
+      Tbulk = Tbulk/drhoUx;
+      Tbulk_prt  = Tbulk;
